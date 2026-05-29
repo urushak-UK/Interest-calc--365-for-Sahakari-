@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nepali Daily Interest Calculator</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for in-browser JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-50 dark:bg-[#0B1121] transition-colors duration-500">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+
+        // Exact days in each Nepali month for accurate calculation (2075 BS - 2115 BS)
+        const bsDaysMap = {
+            2075: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+            2076: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+            2077: [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+            2078: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+            2079: [31, 31, 32, 31, 31, 30, 30, 29, 30, 29, 30, 30],
+            2080: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+            2081: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 30],
+            2082: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+            2083: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+            2084: [31, 31, 32, 31, 31, 30, 30, 30, 29, 29, 30, 30],
+            2085: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 30],
+            2086: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+            2087: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+            2088: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 30],
+            2089: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+            2090: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+            2091: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 30],
+            2092: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+            2093: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+            2094: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 30],
+            2095: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+            2096: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+            2097: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 30],
+            2098: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+            2099: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+            2100: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 30],
+            2101: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+            2102: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+            2103: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 30],
+            2104: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+            2105: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+            2106: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 30],
+            2107: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+            2108: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+            2109: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 30],
+            2110: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+            2111: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+            2112: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 30],
+            2113: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+            2114: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+            2115: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 30]
+        };
+
+        const nepaliMonths = [
+            'Baisakh', 'Jestha', 'Ashadh', 'Shrawan', 'Bhadra', 'Ashwin',
+            'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra'
+        ];
+
+        // Custom BS Date Picker Component
+        const BSDatePicker = ({ label, date, setDate }) => {
+            const maxDays = bsDaysMap[date.year][date.month - 1];
+
+            useEffect(() => {
+                if (date.day > maxDays) {
+                    setDate(prev => ({ ...prev, day: maxDays }));
+                }
+            }, [date.year, date.month, maxDays, setDate]);
+
+            return (
+                <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{label}</label>
+                    <div className="flex gap-2">
+                        <select 
+                            value={date.year}
+                            onChange={(e) => setDate(prev => ({ ...prev, year: parseInt(e.target.value) }))}
+                            className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/50 dark:focus:ring-emerald-400/50 transition-all font-medium cursor-pointer"
+                        >
+                            {Object.keys(bsDaysMap).map(y => (
+                                <option key={y} value={y}>{y}</option>
+                            ))}
+                        </select>
+                        <select 
+                            value={date.month}
+                            onChange={(e) => setDate(prev => ({ ...prev, month: parseInt(e.target.value) }))}
+                            className="flex-[1.5] bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/50 dark:focus:ring-emerald-400/50 transition-all font-medium cursor-pointer"
+                        >
+                            {nepaliMonths.map((m, i) => (
+                                <option key={i} value={i + 1}>{m}</option>
+                            ))}
+                        </select>
+                        <select 
+                            value={date.day}
+                            onChange={(e) => setDate(prev => ({ ...prev, day: parseInt(e.target.value) }))}
+                            className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/50 dark:focus:ring-emerald-400/50 transition-all font-medium cursor-pointer"
+                        >
+                            {Array.from({ length: maxDays }, (_, i) => i + 1).map(d => (
+                                <option key={d} value={d}>{d}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+            );
+        };
+
+        function App() {
+            const [principal, setPrincipal] = useState(1500000);
+            const [rate, setRate] = useState(10.5);
+            const [isDark, setIsDark] = useState(false);
+            
+            const [startDate, setStartDate] = useState({ year: 2081, month: 1, day: 1 });
+            const [endDate, setEndDate] = useState({ year: 2081, month: 1, day: 31 });
+
+            // Apply dark mode class to html tag dynamically
+            useEffect(() => {
+                if (isDark) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }, [isDark]);
+
+            const formatCurrency = (value, showDecimals = false) => {
+                if (isNaN(value)) return 'NPR 0';
+                return new Intl.NumberFormat('en-IN', {
+                    style: 'currency',
+                    currency: 'NPR',
+                    minimumFractionDigits: showDecimals ? 2 : 0,
+                    maximumFractionDigits: showDecimals ? 2 : 0,
+                }).format(showDecimals ? value : Math.round(value));
+            };
+
+            const getDaysFromEpoch = (year, month, day) => {
+                let total = 0;
+                for (let y = 2075; y < year; y++) {
+                    total += bsDaysMap[y].reduce((a, b) => a + b, 0);
+                }
+                for (let m = 0; m < month - 1; m++) {
+                    total += bsDaysMap[year][m];
+                }
+                total += day;
+                return total;
+            };
+
+            const calculatedData = useMemo(() => {
+                const p = parseFloat(principal) || 0;
+                const r = parseFloat(rate) || 0;
+
+                const startEpoch = getDaysFromEpoch(startDate.year, startDate.month, startDate.day);
+                const endEpoch = getDaysFromEpoch(endDate.year, endDate.month, endDate.day);
+                const numberOfDays = Math.max(0, endEpoch - startEpoch);
+
+                const dailyInterest = (p * (r / 100)) / 365;
+                const totalInterest = dailyInterest * numberOfDays;
+
+                return { numberOfDays, dailyInterest, totalInterest };
+            }, [principal, rate, startDate, endDate]);
+
+            const { numberOfDays, dailyInterest, totalInterest } = calculatedData;
+
+            return (
+                <div className="min-h-screen text-slate-800 dark:text-slate-200 p-4 md:p-8 font-sans transition-colors duration-500">
+                    <div className="max-w-5xl mx-auto space-y-8">
+                        <header className="flex items-center gap-4">
+                            <div className="p-4 bg-gradient-to-br from-emerald-600 to-teal-600 text-white rounded-2xl shadow-lg shadow-emerald-500/30">
+                                <i className="fa-solid fa-building-columns text-2xl"></i>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl md:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300">
+                                    Daily Interest Calculator
+                                </h1>
+                                <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base font-medium mt-1">
+                                    365 days calculation (Bikram Sambat)
+                                </p>
+                            </div>
+                            
+                            <button 
+                                onClick={() => setIsDark(!isDark)}
+                                className="ml-auto p-3 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:scale-105 active:scale-95 transition-all text-slate-600 dark:text-slate-300 flex items-center justify-center w-12 h-12"
+                            >
+                                {isDark ? <i className="fa-solid fa-sun text-lg"></i> : <i className="fa-solid fa-moon text-lg"></i>}
+                            </button>
+                        </header>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                            <div className="lg:col-span-7 bg-white dark:bg-slate-900/80 backdrop-blur-xl p-6 md:p-8 rounded-3xl shadow-xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 transition-all">
+                                <div className="space-y-8">
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <label className="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                                                <i className="fa-solid fa-credit-card text-emerald-500 dark:text-emerald-400"></i>
+                                                Loan Amount
+                                            </label>
+                                            <div className="flex items-center bg-slate-50 dark:bg-slate-950 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 focus-within:border-emerald-500 dark:focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 dark:focus-within:ring-emerald-500/20 transition-all">
+                                                <span className="text-slate-400 dark:text-slate-500 mr-2 font-medium">NPR</span>
+                                                <input
+                                                    type="number"
+                                                    value={principal}
+                                                    onChange={(e) => setPrincipal(e.target.value)}
+                                                    className="bg-transparent outline-none w-28 md:w-32 text-right font-bold text-lg text-slate-900 dark:text-white"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <label className="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                                                <i className="fa-solid fa-percent text-emerald-500 dark:text-emerald-400"></i>
+                                                Interest Rate (p.a.)
+                                            </label>
+                                            <div className="flex items-center bg-slate-50 dark:bg-slate-950 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 focus-within:border-emerald-500 dark:focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 dark:focus-within:ring-emerald-500/20 transition-all">
+                                                <input
+                                                    type="number"
+                                                    value={rate}
+                                                    onChange={(e) => setRate(e.target.value)}
+                                                    step="0.1"
+                                                    className="bg-transparent outline-none w-16 text-right font-bold text-lg text-slate-900 dark:text-white"
+                                                />
+                                                <span className="text-slate-400 dark:text-slate-500 ml-1 font-medium">%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
+                                        <div className="flex items-center gap-2 mb-5">
+                                            <i className="fa-solid fa-calendar-days text-emerald-500 dark:text-emerald-400"></i>
+                                            <h3 className="font-semibold text-slate-800 dark:text-slate-200">Date Range (Bikram Sambat)</h3>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <BSDatePicker label="Start Date" date={startDate} setDate={setStartDate} />
+                                            <BSDatePicker label="End Date" date={endDate} setDate={setEndDate} />
+                                        </div>
+                                        
+                                        {numberOfDays === 0 && (
+                                            <div className="mt-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-xl">
+                                                <p className="text-red-600 dark:text-red-400 text-sm font-medium flex items-center gap-2">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                                    End date must be after the start date.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="lg:col-span-5 flex flex-col gap-6">
+                                <div className="bg-gradient-to-br from-emerald-600 to-teal-700 dark:from-emerald-500 dark:to-teal-600 text-white p-8 rounded-3xl shadow-2xl shadow-emerald-500/30 dark:shadow-emerald-900/20 relative overflow-hidden flex flex-col justify-center min-h-[14rem] transition-all">
+                                    <div className="absolute -right-8 -top-8 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl"></div>
+                                    <div className="absolute right-12 -bottom-12 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
+                                    
+                                    <h3 className="text-emerald-100 dark:text-emerald-50 font-medium flex items-center gap-2 mb-3">
+                                        <i className="fa-solid fa-calculator"></i>
+                                        Total Interest ({numberOfDays} Days)
+                                    </h3>
+                                    <div className="text-4xl md:text-5xl font-extrabold tracking-tight">
+                                        {formatCurrency(totalInterest, true)}
+                                    </div>
+                                </div>
+
+                                <div className="bg-white dark:bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl shadow-xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 flex-1 space-y-6 transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-4 bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 rounded-2xl flex items-center justify-center w-12 h-12">
+                                            <i className="fa-solid fa-clock text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-0.5">Calculated Duration</p>
+                                            <p className="text-xl font-bold text-slate-900 dark:text-white">{numberOfDays} Days</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full h-px bg-slate-100 dark:bg-slate-800"></div>
+
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-4 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center w-12 h-12">
+                                            <i className="fa-solid fa-coins text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-0.5">Daily Accrual (365 days base)</p>
+                                            <p className="text-xl font-bold text-slate-900 dark:text-white">{formatCurrency(dailyInterest, true)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full h-px bg-slate-100 dark:bg-slate-800"></div>
+
+                                    <div className="bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 transition-colors">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">Principal Amount</span>
+                                            <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(principal)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-bold pt-3 border-t border-slate-200 dark:border-slate-800 mt-2">
+                                            <span>Total Amount at End</span>
+                                            <span>{formatCurrency(parseFloat(principal) + totalInterest, true)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
